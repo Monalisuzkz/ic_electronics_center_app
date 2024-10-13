@@ -486,7 +486,6 @@ Partial Class Form2
         Me.pnl_products.Name = "pnl_products"
         Me.pnl_products.Size = New System.Drawing.Size(1321, 1002)
         Me.pnl_products.TabIndex = 47
-        Me.pnl_products.Visible = False
         '
         'btn_searchproduct
         '
@@ -959,7 +958,7 @@ Partial Class Form2
         Me.pnl_archive.Location = New System.Drawing.Point(286, 0)
         Me.pnl_archive.Name = "pnl_archive"
         Me.pnl_archive.ShadowDecoration.Parent = Me.pnl_archive
-        Me.pnl_archive.Size = New System.Drawing.Size(1324, 1005)
+        Me.pnl_archive.Size = New System.Drawing.Size(1323, 1005)
         Me.pnl_archive.TabIndex = 57
         Me.pnl_archive.Visible = False
         '

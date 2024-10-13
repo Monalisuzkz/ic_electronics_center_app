@@ -312,6 +312,8 @@
     <None Include="Resources\9055226_bxs_dashboard_icon %281%29.png" />
     <None Include="Resources\3671715_box_icon.png" />
     <None Include="Resources\3671715_box_icon1.png" />
+    <None Include="Resources\3018587_admin_administrator_ajax_options_permission_icon.png" />
+    <None Include="Resources\3018587_admin_administrator_ajax_options_permission_icon1.png" />
     <Content Include="x64\SQLite.Interop.dll" />
     <Content Include="x86\SQLite.Interop.dll" />
     <Content Include="ic_electronics.db">

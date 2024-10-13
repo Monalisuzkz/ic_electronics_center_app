@@ -4,6 +4,7 @@ Imports System.Runtime.InteropServices.ComTypes
 Imports System.Text
 Imports System.Runtime.CompilerServices
 Imports System.IO
+Imports System.Windows.Forms.DataVisualization.Charting
 
 Public Class Form3
     Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
@@ -20,53 +21,50 @@ Public Class Form3
         Try
 
             conn.Open()
-
             Timer1.Start()
             idleTimer.Interval = 50000
             idleTimer.Start()
-
-            datatable_itemlist.Columns(0).ReadOnly = True
-            datatable_itemlist.Columns(1).ReadOnly = True
-            datatable_itemlist.Columns(3).ReadOnly = True
+            LoadSalesReport()
+            datatable_itemlistproducts.Columns(0).ReadOnly = True
+            datatable_itemlistproducts.Columns(1).ReadOnly = True
+            datatable_itemlistproducts.Columns(3).ReadOnly = True
             Dim chk As New DataGridViewCheckBoxColumn()
             chk.HeaderText = "Select"
             chk.Name = "chk"
-            datatable_itemlist.Columns.Add(chk)
+            datatable_itemlistproducts.Columns.Add(chk)
 
-            ' Load the data into the form components
             LoadSuppliers()
             LoadProducts()
             LoadReturnofProducts()
             LoadServiceTransactions()
             LoadProductTransactions()
             LoadArchivedProducts()
-
             pnl_returnofproducts.Location = New Point(286, 0)
-            cmb_productname.DropDownStyle = ComboBoxStyle.DropDown
-            cmb_productname.AutoCompleteMode = AutoCompleteMode.SuggestAppend
-            cmb_productname.AutoCompleteSource = AutoCompleteSource.ListItems
-
             LoadArchivedReturnedProducts()
             LoadReturnedProducts()
             LoadLowStockProducts()
             LoadTop5SellingProducts()
             datatable_top5sellingproducts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
 
+            SetupDailyTransactionHistoryDataGridView()
+            SetupDailyTransactionHistoryDataGridView()
+            SetupWeeklyTransactionHistoryDataGridView()
+            SetupMonthlyTransactionHistoryDataGridView()
 
             Dim startDate As DateTime = New DateTime(2023, 1, 1)
             Dim endDate As DateTime = DateTime.Now
             SetupChart()
-
+            LoadRecentTransactions()
             LoadSalesByDay()
             LoadSalesByWeek()
             LoadSalesByMonth()
-
+            InitializeChart()
             PopulateROPTransactionIdComboBox()
             PopulateROPProductComboBox()
             PopulateServiceComboBox()
             tb_ropreason.Items.Add("Defective Item")
             tb_ropreason.Items.Add("Wrong Item")
-
+            LoadServiceSalesReport()
         Catch ex As Exception
             MessageBox.Show("An error occurred while connecting to the database: " & ex.Message)
         Finally
@@ -110,7 +108,7 @@ Public Class Form3
         idleTimer.Stop()
     End Sub
 
-    Private Sub btn_dashboard_Click(sender As Object, e As EventArgs)
+    Private Sub btn_dashboard_Click(sender As Object, e As EventArgs) Handles btn_dashboard.Click
         pnl_dashboard.Visible = True
         pnl_cashier.Visible = False
         pnl_products.Visible = False
@@ -121,7 +119,7 @@ Public Class Form3
         pnl_archive.Visible = False
     End Sub
 
-    Private Sub btn_inventory_Click(sender As Object, e As EventArgs)
+    Private Sub btn_inventory_Click(sender As Object, e As EventArgs) Handles btn_inventory.Click
         pnl_dashboard.Visible = False
         pnl_cashier.Visible = False
         pnl_products.Visible = False
@@ -254,7 +252,14 @@ Public Class Form3
                 datatable_producttransactions.Columns("total_change").Width = 100
                 datatable_producttransactions.Columns("transaction_date_time").Width = 150
 
+                ' Set the wrap mode for product name
                 datatable_producttransactions.Columns("product_name").DefaultCellStyle.WrapMode = DataGridViewTriState.True
+
+                ' Format numeric columns to display two decimal places
+                datatable_producttransactions.Columns("unit_cost").DefaultCellStyle.Format = "F2"
+                datatable_producttransactions.Columns("total_cost").DefaultCellStyle.Format = "F2"
+                datatable_producttransactions.Columns("total_amount").DefaultCellStyle.Format = "F2"
+                datatable_producttransactions.Columns("total_change").DefaultCellStyle.Format = "F2"
 
             Catch ex As SQLiteException
                 MessageBox.Show("Database connection error: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -264,19 +269,45 @@ Public Class Form3
 
     Private Sub LoadServiceTransactions()
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
         Dim connectionString As String = $"Data Source={dbPath};Version=3;"
 
         Using connection As New SQLiteConnection(connectionString)
             Try
                 connection.Open()
 
-                Dim query As String = "SELECT * FROM service_transactions"
+                ' Exclude supplier_id from the selection
+                Dim query As String = "SELECT transaction_id, service_cost, amount_paid, change_given, transaction_date_time, service_name FROM service_transactions"
                 Dim adapter As New SQLiteDataAdapter(query, connection)
                 Dim table As New DataTable()
 
                 adapter.Fill(table)
                 datatable_servicetransactions.DataSource = table
+
+                ' Center-align the column headers
+                datatable_servicetransactions.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+                ' Center-align the data in all columns
+                For Each column As DataGridViewColumn In datatable_servicetransactions.Columns
+                    column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+                Next
+
+                ' Format the numeric columns to two decimal places
+                If datatable_servicetransactions.Columns.Contains("service_cost") Then
+                    datatable_servicetransactions.Columns("service_cost").DefaultCellStyle.Format = "F2"
+                End If
+
+                If datatable_servicetransactions.Columns.Contains("total_service_amount") Then
+                    datatable_servicetransactions.Columns("total_service_amount").DefaultCellStyle.Format = "F2"
+                End If
+
+                ' Format amount_paid and change_given to two decimal places
+                If datatable_servicetransactions.Columns.Contains("amount_paid") Then
+                    datatable_servicetransactions.Columns("amount_paid").DefaultCellStyle.Format = "F2"
+                End If
+
+                If datatable_servicetransactions.Columns.Contains("change_given") Then
+                    datatable_servicetransactions.Columns("change_given").DefaultCellStyle.Format = "F2"
+                End If
 
             Catch ex As SQLiteException
                 MessageBox.Show("Database connection error: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -284,12 +315,12 @@ Public Class Form3
         End Using
     End Sub
 
+
     Private Sub LoadReturnofProducts()
         datatable_returnofproducts.DataSource = Nothing
 
         Dim query As String = "SELECT * FROM return_of_products"
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
         Dim connectionString As String = $"Data Source={dbPath};Version=3;"
 
         Using conn As New SQLiteConnection(connectionString)
@@ -303,6 +334,7 @@ Public Class Form3
             End Using
         End Using
 
+        ' Add checkbox column if it doesn't already exist
         If datatable_returnofproducts.Columns.Contains("chkSelect") = False Then
             Dim chkColumn As New DataGridViewCheckBoxColumn()
             chkColumn.HeaderText = "Select"
@@ -310,14 +342,24 @@ Public Class Form3
             datatable_returnofproducts.Columns.Insert(0, chkColumn)
         End If
 
+        ' Format numeric columns with two decimal places
+        If datatable_returnofproducts.Columns.Contains("unit_cost") Then
+            datatable_returnofproducts.Columns("unit_cost").DefaultCellStyle.Format = "F2"
+        End If
+
+        If datatable_returnofproducts.Columns.Contains("refund_amount") Then
+            datatable_returnofproducts.Columns("refund_amount").DefaultCellStyle.Format = "F2"
+        End If
+
         datatable_returnofproducts.AutoResizeColumns()
     End Sub
+
+
     Private originalProductList As New List(Of String)()
 
     Private Sub LoadProducts()
         datatable_products.DataSource = Nothing
         cmb_productname.Items.Clear()
-        originalProductList.Clear()
 
         Dim query As String = "SELECT product_id, product_name, supplier_id, unit_price, quantity_in_stock, unit_of_measurement, total_cost, remaining_stock_value, sold FROM products"
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
@@ -330,13 +372,13 @@ Public Class Form3
                     Dim dt As New DataTable()
                     dt.Load(reader)
 
+                    ' Populate the ComboBox with product names
                     For Each row As DataRow In dt.Rows
                         Dim productItem As New Product With {
                         .ProductID = CInt(row("product_id")),
                         .ProductName = row("product_name").ToString()
                     }
                         cmb_productname.Items.Add(productItem)
-                        originalProductList.Add(productItem.ProductName)
                     Next
 
                     datatable_products.DataSource = dt
@@ -344,12 +386,21 @@ Public Class Form3
             End Using
         End Using
 
+        ' Add checkbox column if it doesn't already exist
         If datatable_products.Columns.Contains("chkSelect") = False Then
             Dim chkColumn As New DataGridViewCheckBoxColumn()
             chkColumn.HeaderText = "Select"
             chkColumn.Name = "chkSelect"
             datatable_products.Columns.Insert(0, chkColumn)
         End If
+
+        ' Format relevant columns with two decimal places
+        Dim decimalColumns As String() = {"unit_price", "quantity_in_stock", "total_cost", "remaining_stock_value"}
+        For Each colName As String In decimalColumns
+            If datatable_products.Columns.Contains(colName) Then
+                datatable_products.Columns(colName).DefaultCellStyle.Format = "F2"
+            End If
+        Next
 
         datatable_products.AutoResizeColumns()
     End Sub
@@ -387,9 +438,9 @@ Public Class Form3
 
                     For Each row As DataRow In dt.Rows
                         Dim supplierItem As New Supplier With {
-                        .SupplierID = CInt(row("supplier_id")),
-                        .CompanyName = row("company_name").ToString()
-                    }
+                    .SupplierID = CInt(row("supplier_id")),
+                    .CompanyName = row("company_name").ToString()
+                }
                         cmb_supplierp.Items.Add(supplierItem)
                     Next
 
@@ -468,7 +519,11 @@ Public Class Form3
                 Using reader As SQLiteDataReader = cmd.ExecuteReader()
                     If reader.Read() Then
                         cmb_productname.Text = reader("product_name").ToString()
-                        tb_productprice.Text = reader("unit_price").ToString()
+
+                        ' Format the unit price to two decimal places
+                        Dim unitPrice As Decimal = Decimal.Parse(reader("unit_price").ToString())
+                        tb_productprice.Text = unitPrice.ToString("F2") ' Format as "99.00"
+
                         tb_quantity.Clear()
                         UpdateTotalCostBasedOnQuantity()
                     End If
@@ -477,27 +532,25 @@ Public Class Form3
         End Using
     End Sub
 
-    Private Sub cmb_productname_TextChanged(sender As Object, e As EventArgs) Handles cmb_productname.TextChanged
-        Dim searchText As String = cmb_productname.Text.ToLower()
 
-        ' Clear the ComboBox items and reset the list based on search text
-        cmb_productname.Items.Clear()
+    Private Sub cmb_productname_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cmb_productname.SelectedIndexChanged
 
-        For Each product As String In originalProductList
-            If product.ToLower().Contains(searchText) Then
-                cmb_productname.Items.Add(product)
+        If cmb_productname.SelectedItem IsNot Nothing Then
+            Dim selectedProduct As Product = CType(cmb_productname.SelectedItem, Product)
+            Dim selectedProductId As Integer = selectedProduct.ProductID
+
+            If GetQuantityInStock(selectedProduct.ProductName) = 0 Then
+                MessageBox.Show("This product is out of stock and cannot be selected.", "Out of Stock", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                ClearProductFields()
+                cmb_productname.SelectedIndex = -1
+                Return
             End If
-        Next
 
-        If cmb_productname.Items.Count > 0 Then
-            cmb_productname.DroppedDown = True
+            LoadProductDetails(selectedProductId)
         Else
-            cmb_productname.DroppedDown = False
+            ClearProductFields()
         End If
     End Sub
-
-
-
 
     Private Function GetQuantityInStock(productName As String) As Integer
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
@@ -559,6 +612,53 @@ Public Class Form3
         End Try
     End Sub
 
+    Private Sub tb_servicemoneyamount_TextChanged(sender As Object, e As EventArgs) Handles tb_servicemoneyamount.TextChanged
+        CalculateServiceChange()
+    End Sub
+
+    Private Sub txt_totalearned_TextChanged(sender As Object, e As EventArgs) Handles txt_totalearned.TextChanged
+        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
+        Dim connectionString As String = $"Data Source={dbPath};Version=3;"
+        Dim connection As SQLiteConnection = New SQLiteConnection(connectionString)
+
+        Try
+            connection.Open()
+            Dim query As String = "SELECT (SELECT SUM(total_cost) FROM product_transactions) + " &
+                           "(SELECT SUM(service_cost) FROM service_transactions) AS total_earned;"
+            Dim cmd As SQLiteCommand = New SQLiteCommand(query, connection)
+
+            Dim result = cmd.ExecuteScalar()
+            If result IsNot DBNull.Value Then
+                txt_totalearned.Text = Convert.ToDecimal(result).ToString("F2") ' Format to 2 decimal places
+            Else
+                txt_totalearned.Text = "0.00" ' Default to 0.00
+            End If
+
+        Catch ex As SQLiteException
+            MessageBox.Show("Database error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        Finally
+            connection.Close()
+        End Try
+    End Sub
+
+    Private Sub CalculateServiceChange()
+        Try
+            Dim serviceCost As Decimal = Decimal.Parse(tb_servicecost.Text)
+            Dim amountPaid As Decimal = Decimal.Parse(tb_servicemoneyamount.Text)
+
+            Dim change As Decimal = amountPaid - serviceCost
+
+            If amountPaid >= serviceCost Then
+                tb_servicechange.Text = change.ToString("F2") ' Format change to two decimal places
+            Else
+                tb_servicechange.Clear()
+            End If
+        Catch ex As Exception
+            tb_servicechange.Clear()
+        End Try
+    End Sub
+
+
     Private Sub LoadServiceCost(serviceName As String)
         conn = New SQLiteConnection(connectionString)
 
@@ -571,7 +671,8 @@ Public Class Form3
             Dim reader As SQLiteDataReader = cmd.ExecuteReader()
 
             If reader.Read() Then
-                tb_servicecost.Text = reader("service_cost").ToString()
+                Dim serviceCost As Decimal = If(IsDBNull(reader("service_cost")), 0D, Convert.ToDecimal(reader("service_cost")))
+                tb_servicecost.Text = serviceCost.ToString("F2")
             End If
         Catch ex As SQLiteException
             MessageBox.Show("Error: " & ex.Message)
@@ -580,117 +681,168 @@ Public Class Form3
         End Try
     End Sub
 
+    Private Sub InitializeChart()
+        ' Set chart properties
+        Chart_salesandservices.ChartAreas.Clear()
+        Dim chartArea As New ChartArea()
+        Chart_salesandservices.ChartAreas.Add(chartArea)
+        Chart_salesandservices.Series("Series1").IsVisibleInLegend = False
+
+        ' Create and set the chart title
+        Dim chartTitle As New Title()
+        chartTitle.Text = "Monthly Revenue Analysis: Product Sales vs. Service Sales"
+        chartTitle.Font = New Font("Arial", 14, FontStyle.Bold)
+        chartTitle.ForeColor = Color.Black
+        Chart_salesandservices.Titles.Add(chartTitle)  ' Add the title to the Titles collection
+
+        ' Set axis titles
+        Chart_salesandservices.ChartAreas(0).AxisX.Title = "Month"
+        Chart_salesandservices.ChartAreas(0).AxisY.Title = "Total Sales"
+
+        ' Customize X axis labels to make them easier to read
+        Chart_salesandservices.ChartAreas(0).AxisX.Interval = 1
+        Chart_salesandservices.ChartAreas(0).AxisX.MajorGrid.LineColor = Color.LightGray
+        Chart_salesandservices.ChartAreas(0).AxisY.MajorGrid.LineColor = Color.LightGray
+
+        ' Add legend for the series
+        Dim legend As New Legend()
+        legend.Docking = Docking.Top
+        Chart_salesandservices.Legends.Add(legend)
+
+        ' Add series for Product Sales
+        Dim productSalesSeries As New Series("Product Sales")
+        productSalesSeries.ChartType = SeriesChartType.Column
+        productSalesSeries.Color = Color.OrangeRed
+        productSalesSeries.BorderWidth = 1
+        Chart_salesandservices.Series.Add(productSalesSeries)
+
+        ' Add series for Service Sales
+        Dim serviceSalesSeries As New Series("Service Sales")
+        serviceSalesSeries.ChartType = SeriesChartType.Column
+        serviceSalesSeries.Color = Color.Orange
+        serviceSalesSeries.BorderWidth = 1
+        Chart_salesandservices.Series.Add(serviceSalesSeries)
+
+        ' Add all months to the X-axis
+        Dim months() As String = {"January", "February", "March", "April", "May", "June",
+                           "July", "August", "September", "October", "November", "December"}
+
+        For Each month As String In months
+            ' Add empty data points for each month to ensure all months are displayed
+            productSalesSeries.Points.AddXY(month, 0)
+            serviceSalesSeries.Points.AddXY(month, 0)
+        Next
+
+        ' Load data into the chart and update the correct points
+        LoadDataIntoChart()
+
+    End Sub
+
+    Private Sub LoadDataIntoChart()
+        Dim connectionString As String = "Data Source=C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
+
+        Using connection As New SQLiteConnection(connectionString)
+            connection.Open()
+
+            ' Query for Product Sales
+            Dim productQuery As String = "SELECT strftime('%m', transaction_date_time) AS Month, SUM(total_cost) AS TotalSales " &
+                                      "FROM product_transactions GROUP BY Month ORDER BY Month"
+
+            Using productCommand As New SQLiteCommand(productQuery, connection)
+                Using reader As SQLiteDataReader = productCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim monthIndex As Integer = CInt(reader("Month")) - 1
+                        Chart_salesandservices.Series("Product Sales").Points(monthIndex).YValues(0) = reader("TotalSales")
+                    End While
+                End Using
+            End Using
+
+            ' Query for Service Sales
+            Dim serviceQuery As String = "SELECT strftime('%m', transaction_date_time) AS Month, SUM(service_cost) AS TotalSales " &
+                                      "FROM service_transactions GROUP BY Month ORDER BY Month"
+
+            Using serviceCommand As New SQLiteCommand(serviceQuery, connection)
+                Using reader As SQLiteDataReader = serviceCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim monthIndex As Integer = CInt(reader("Month")) - 1
+                        Chart_salesandservices.Series("Service Sales").Points(monthIndex).YValues(0) = reader("TotalSales")
+                    End While
+                End Using
+            End Using
+        End Using
+    End Sub
+
+    Private Sub datatable_itemlistproducts_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_itemlistproducts.CellClick
+        Try
+            If e.RowIndex >= 0 Then ' Ensure a valid row is clicked
+                Dim selectedRow As DataGridViewRow = datatable_itemlistproducts.Rows(e.RowIndex)
+
+                ' Check if the checkbox for the selected row is checked
+                Dim isSelected As Boolean = Convert.ToBoolean(selectedRow.Cells("chkSelect").Value)
+
+                If isSelected Then
+                    ' Unselect the row (checkbox unchecked)
+                    selectedRow.Cells("chkSelect").Value = False
+
+                    ' Clear specific fields when unselecting
+                    tb_producttotalcost.Clear()
+                    tb_moneyamount.Clear()
+                    tb_productamounttopaid.Clear()
+                    tb_change.Clear()
+                Else
+                    ' Select the row (checkbox checked)
+                    selectedRow.Cells("chkSelect").Value = True
+                    ' Here you could retrieve and display other details if needed
+                End If
+            End If
+        Catch ex As Exception
+            MessageBox.Show("An error occurred: " & ex.Message)
+        End Try
+    End Sub
 
     Private Sub InitializeDataGridView()
-        datatable_itemlist.Columns.Clear()
+        datatable_itemlistproducts.Columns.Clear()
 
+        ' Add a checkbox column for selection
         Dim chkSelectColumn As New DataGridViewCheckBoxColumn()
         chkSelectColumn.Name = "chkSelect"
         chkSelectColumn.HeaderText = "Select"
         chkSelectColumn.Width = 50
         chkSelectColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
-        datatable_itemlist.Columns.Add(chkSelectColumn)
+        datatable_itemlistproducts.Columns.Add(chkSelectColumn)
 
-        datatable_itemlist.Columns.Add("product_name", "Product Name")
-        datatable_itemlist.Columns.Add("unit_cost", "Unit Cost")
-        datatable_itemlist.Columns.Add("return_quantity", "Return Quantity")
-        datatable_itemlist.Columns.Add("refund_amount", "Refund Amount")
-        datatable_itemlist.Columns.Add("return_reason", "Return Reason")
-        datatable_itemlist.Columns.Add("return_date_time", "Return Date")
-        datatable_itemlist.Columns.Add("transaction_id", "Transaction ID")
+        ' Adding only the relevant columns
+        datatable_itemlistproducts.Columns.Add("product_name", "Product Name")
+        datatable_itemlistproducts.Columns.Add("unit_cost", "Product Price") ' Renaming to Product Price
+        datatable_itemlistproducts.Columns.Add("return_quantity", "Quantity")
+        datatable_itemlistproducts.Columns.Add("total_cost", "Total Cost") ' Assuming you want to calculate total cost from price and quantity
 
-        For Each column As DataGridViewColumn In datatable_itemlist.Columns
-            If column.Index <> 2 Then
+        ' Set ReadOnly for all columns except the checkbox
+        For Each column As DataGridViewColumn In datatable_itemlistproducts.Columns
+            If column.Index <> 0 Then ' Checkbox column should remain editable
                 column.ReadOnly = True
             End If
         Next
-
-        LoadReturnedProducts()
     End Sub
 
     Private Sub btn_addtolist_Click(sender As Object, e As EventArgs) Handles btn_addtolist.Click
-        ' Variables to hold product and service details
-        Dim itemName As String = ""
-        Dim itemPrice As Decimal = 0
-        Dim quantity As Integer = 0
-        Dim totalCost As Decimal = 0
-        Dim hasItem As Boolean = False
+        Dim productName As String = cmb_productname.SelectedItem.ToString()
+        Dim productPrice As Decimal = Decimal.Parse(tb_productprice.Text)
+        Dim quantity As Integer = Integer.Parse(tb_quantity.Text)
+        Dim totalCost As Decimal = productPrice * quantity
 
-        ' Check if a product is selected
-        If Not String.IsNullOrWhiteSpace(cmb_productname.Text) Then
-            itemName = cmb_productname.Text
+        Dim row As String() = {productName, productPrice.ToString(), quantity.ToString(), totalCost.ToString()}
+        datatable_itemlist.Rows.Add(row)
 
-            If String.IsNullOrWhiteSpace(tb_productprice.Text) OrElse String.IsNullOrWhiteSpace(tb_quantity.Text) Then
-                MessageBox.Show("Please fill in all product details.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            If Not Decimal.TryParse(tb_productprice.Text, itemPrice) Then
-                MessageBox.Show("Invalid product price. Please enter a valid number.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            If Not Integer.TryParse(tb_quantity.Text, quantity) Then
-                MessageBox.Show("Invalid quantity. Please enter a valid number.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            totalCost = itemPrice * quantity
-            Dim row As String() = {itemName, itemPrice.ToString("F2"), quantity.ToString(), totalCost.ToString("F2")}
-            datatable_itemlist.Rows.Add(row)
-            hasItem = True
-        End If
-
-        ' Check if a service is selected
-        If Not String.IsNullOrWhiteSpace(cmb_servicename.Text) Then
-            itemName = cmb_servicename.Text
-
-            If String.IsNullOrWhiteSpace(tb_servicecost.Text) OrElse String.IsNullOrWhiteSpace(tb_quantity.Text) Then
-                MessageBox.Show("Please fill in all service details.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            If Not Decimal.TryParse(tb_servicecost.Text, itemPrice) Then
-                MessageBox.Show("Invalid service cost. Please enter a valid number.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            If Not Integer.TryParse(tb_quantity.Text, quantity) Then
-                MessageBox.Show("Invalid quantity. Please enter a valid number.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                Return
-            End If
-
-            totalCost = itemPrice * quantity
-            Dim row As String() = {itemName, itemPrice.ToString("F2"), quantity.ToString(), totalCost.ToString("F2")}
-            datatable_servicelist.Rows.Add(row) ' Add to service list
-            hasItem = True
-        End If
-
-        ' Check if at least one item (product or service) was added
-        If Not hasItem Then
-            MessageBox.Show("Please select a product or a service to add to the list.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-            Return
-        End If
-
-        ' Update total cost and clear fields
         UpdateTotalCost()
         tb_productamounttopaid.Text = tb_producttotalcost.Text
+
         ClearAddProductFields()
     End Sub
 
 
-    Private Sub datatable_servicelist_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_servicelist.CellContentClick
-
-    End Sub
-
-    Private Sub datatable_itemlist_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_itemlist.CellContentClick
-        If e.RowIndex >= 0 AndAlso e.ColumnIndex = 2 Then
-            datatable_itemlist.BeginEdit(True)
-        End If
-    End Sub
-
     Private Sub btn_clearadditems_Click(sender As Object, e As EventArgs) Handles btn_clearadditems.Click
-        datatable_itemlist.Rows.Clear()
+        datatable_itemlistproducts.Rows.Clear()
 
         UpdateTotalCost()
 
@@ -701,29 +853,32 @@ Public Class Form3
     End Sub
 
     Private Sub btn_deleteadditems_Click(sender As Object, e As EventArgs) Handles btn_deleteadditems.Click
-        For i As Integer = datatable_itemlist.Rows.Count - 1 To 0 Step -1
-
-            Dim isChecked As Boolean = Convert.ToBoolean(datatable_itemlist.Rows(i).Cells("chk").Value)
+        For i As Integer = datatable_itemlistproducts.Rows.Count - 1 To 0 Step -1
+            Dim isChecked As Boolean = Convert.ToBoolean(datatable_itemlistproducts.Rows(i).Cells("chkSelect").Value)
 
             If isChecked Then
-                datatable_itemlist.Rows.RemoveAt(i)
+                datatable_itemlistproducts.Rows.RemoveAt(i)
             End If
         Next
         UpdateTotalCost()
-        If datatable_itemlist.Rows.Count = 0 Then
+        If datatable_itemlistproducts.Rows.Count = 0 Then
             tb_productamounttopaid.Clear()
         End If
     End Sub
+
     Private Sub ClearAddProductFields()
+        cmb_productname.SelectedItem = Nothing
         tb_productprice.Clear()
         tb_quantity.Clear()
-        cmb_productname.SelectedIndex = -1
+        tb_producttotalcost.Clear()
+
     End Sub
+
 
     Private Sub UpdateTotalCost()
         Dim sumTotalCost As Decimal = 0
 
-        For Each row As DataGridViewRow In datatable_itemlist.Rows
+        For Each row As DataGridViewRow In datatable_itemlistproducts.Rows
             If Not row.IsNewRow Then
                 sumTotalCost += Decimal.Parse(row.Cells(3).Value.ToString())
             End If
@@ -731,6 +886,7 @@ Public Class Form3
         tb_producttotalcost.Text = sumTotalCost.ToString("F2")
         tb_productamounttopaid.Text = tb_producttotalcost.Text ' Update this as well
     End Sub
+
     Private Sub tb_moneyamount_TextChanged(sender As Object, e As EventArgs) Handles tb_moneyamount.TextChanged
         CalculateChange()
     End Sub
@@ -738,7 +894,6 @@ Public Class Form3
     Private Sub tb_productamounttopaid_TextChanged(sender As Object, e As EventArgs) Handles tb_productamounttopaid.TextChanged
         CalculateChange()
     End Sub
-
 
     Private Sub CalculateChange()
         Try
@@ -759,6 +914,16 @@ Public Class Form3
 
     Private Sub tb_quantity_TextChanged(sender As Object, e As EventArgs) Handles tb_quantity.TextChanged
         UpdateTotalCostBasedOnQuantity()
+        Dim productPrice As Decimal
+        Dim quantity As Integer
+
+        If Decimal.TryParse(tb_productprice.Text, productPrice) AndAlso
+           Integer.TryParse(tb_quantity.Text, quantity) Then
+            Dim totalCost As Decimal = productPrice * quantity
+            tb_productamounttopaid.Text = totalCost.ToString("F2") ' Format to 2 decimal places
+        Else
+            tb_productamounttopaid.Clear() ' Clear if parsing fails
+        End If
     End Sub
 
     Private Sub UpdateTotalCostBasedOnQuantity()
@@ -776,6 +941,7 @@ Public Class Form3
             tb_producttotalcost.Clear()
         End If
     End Sub
+
     Private Sub tb_numeric_KeyPress(sender As Object, e As KeyPressEventArgs) Handles tb_productprice.KeyPress, tb_quantity.KeyPress, tb_moneyamount.KeyPress
         If Not Char.IsControl(e.KeyChar) AndAlso Not Char.IsDigit(e.KeyChar) AndAlso e.KeyChar <> "."c Then
             e.Handled = True
@@ -804,7 +970,7 @@ Public Class Form3
             conn.Open()
             Using transaction = conn.BeginTransaction()
                 Try
-                    For Each row As DataGridViewRow In datatable_itemlist.Rows
+                    For Each row As DataGridViewRow In datatable_itemlistproducts.Rows
                         If Not row.IsNewRow Then
                             Dim productName As String = row.Cells(0).Value.ToString()
                             Dim unitCost As Decimal = Decimal.Parse(row.Cells(1).Value.ToString())
@@ -862,7 +1028,7 @@ Public Class Form3
                     Next
 
                     transaction.Commit()
-
+                    LoadDataIntoChart()
                     LoadLowStockProducts()
                     LoadTop5SellingProducts()
                     LoadProducts()
@@ -874,10 +1040,14 @@ Public Class Form3
                     LoadSalesByMonth()
                     LoadSalesByWeek()
                     SetupChart()
+                    SetupDailyTransactionHistoryDataGridView()
+                    SetupDailyTransactionHistoryDataGridView()
+                    SetupWeeklyTransactionHistoryDataGridView()
+                    SetupMonthlyTransactionHistoryDataGridView()
+
                     CreateAndShowReceipt(productSummary, totalAmount, totalChange, transactionDateTime)
 
                     MessageBox.Show("Product transaction completed.")
-                    UpdateTotalFields()
                     ClearFields()
                 Catch ex As Exception
                     transaction.Rollback()
@@ -886,7 +1056,6 @@ Public Class Form3
             End Using
         End Using
     End Sub
-
 
     Private Function GetProductIdByName(productName As String) As Integer
         Dim productId As Integer = 0
@@ -997,7 +1166,7 @@ Public Class Form3
         tb_change.Clear()
         tb_productprice.Clear()
 
-        datatable_itemlist.Rows.Clear()
+        datatable_itemlistproducts.Rows.Clear()
     End Sub
 
     Private Sub UpdateProductStockAndSold(conn As SQLiteConnection, productName As String, quantitySold As Integer)
@@ -1050,6 +1219,129 @@ Public Class Form3
         End If
     End Sub
 
+    Private Sub btn_completetransactservices_Click(sender As Object, e As EventArgs) Handles btn_completetransactservices.Click
+        Dim amountPaid As Decimal = Decimal.Parse(tb_servicemoneyamount.Text)
+        Dim serviceCost As Decimal = Decimal.Parse(tb_servicecost.Text)
+
+        If amountPaid < serviceCost Then
+            MessageBox.Show("Not enough money to complete the transaction.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim changeGiven As Decimal = amountPaid - serviceCost
+        Dim transactionDateTime As DateTime = DateTime.Now
+
+        Using conn As New SQLiteConnection(connectionString)
+            conn.Open()
+            Using transaction = conn.BeginTransaction()
+                Try
+                    Dim serviceId As Integer = CInt(tb_serviceid.Text)
+                    Dim serviceName As String = cmb_servicename.SelectedItem.ToString()
+
+                    ' Prepare to insert the service transaction
+                    Dim query As String = "INSERT INTO service_transactions (service_id, service_name, service_cost, amount_paid, change_given, transaction_date_time) " &
+                                      "VALUES (@service_id, @service_name, @service_cost, @amount_paid, @change_given, @transaction_date_time)"
+
+                    Using cmd As New SQLiteCommand(query, conn, transaction)
+                        cmd.Parameters.AddWithValue("@service_id", serviceId)
+                        cmd.Parameters.AddWithValue("@service_name", serviceName)
+                        cmd.Parameters.AddWithValue("@service_cost", Math.Round(serviceCost, 2))  ' Ensure two decimal places
+                        cmd.Parameters.AddWithValue("@amount_paid", Math.Round(amountPaid, 2))      ' Ensure two decimal places
+                        cmd.Parameters.AddWithValue("@change_given", Math.Round(changeGiven, 2))    ' Ensure two decimal places
+                        cmd.Parameters.AddWithValue("@transaction_date_time", transactionDateTime)
+
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    transaction.Commit()
+
+                    ' Create and show receipt
+                    CreateAndShowServiceReceipt(serviceId, serviceName, serviceCost, amountPaid, changeGiven, transactionDateTime)
+
+                    MessageBox.Show("Service transaction completed.")
+                    ClearServiceFields()
+                    LoadDataIntoChart()
+                    LoadLowStockProducts()
+                    LoadTop5SellingProducts()
+                    LoadProducts()
+                    PopulateROPTransactionIdComboBox()
+                    LoadProductTransactions()
+                    LoadServiceTransactions()
+                    Dim startDate As DateTime = DateTime.Now.AddDays(-30)
+                    Dim endDate As DateTime = DateTime.Now
+                    LoadSalesByDay()
+                    LoadSalesByMonth()
+                    LoadSalesByWeek()
+
+                    SetupDailyTransactionHistoryDataGridView()
+                    SetupDailyTransactionHistoryDataGridView()
+                    SetupWeeklyTransactionHistoryDataGridView()
+                    SetupMonthlyTransactionHistoryDataGridView()
+
+                    ' Setup the chart
+                    SetupChart()
+
+                Catch ex As Exception
+                    transaction.Rollback()
+                    MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                End Try
+            End Using
+        End Using
+    End Sub
+
+
+
+    Private Sub CreateAndShowServiceReceipt(serviceId As Integer, serviceName As String, serviceCost As Decimal, amountPaid As Decimal, changeGiven As Decimal, transactionDateTime As DateTime)
+        Dim receipt As New StringBuilder()
+        receipt.AppendLine("IC Electronics Center")
+        receipt.AppendLine("8-B F Bangoy St, Davao City, 8000")
+        receipt.AppendLine("===================================")
+        receipt.AppendLine("Service Receipt")
+        receipt.AppendLine("===================================")
+        receipt.AppendLine($"Date & Time: {transactionDateTime}")
+        receipt.AppendLine("Service ID   Service Name       Service Cost   Amount Paid   Change Given")
+        receipt.AppendLine("----------------------------------------------------------------------------")
+
+        ' Service transaction details
+        receipt.AppendLine($"{serviceId,-10} {serviceName,-20} {serviceCost,12:C} {amountPaid,12:C} {changeGiven,14:C}")
+
+        receipt.AppendLine("----------------------------------------------------------------------------")
+        receipt.AppendLine($"Total Amount Paid: {amountPaid:C}")
+        receipt.AppendLine($"Total Change Given: {changeGiven:C}")
+        receipt.AppendLine("===================================")
+
+        ' Ask user if they want to print the receipt
+        Dim result As DialogResult = MessageBox.Show(receipt.ToString() & vbCrLf & "Would you like to print this receipt?", "Transaction Completed", MessageBoxButtons.YesNo, MessageBoxIcon.Information)
+
+        ' Print receipt if the user chooses 'Yes'
+        If result = DialogResult.Yes Then
+            PrintReceiptservice(receipt.ToString())
+        End If
+    End Sub
+
+    Private Sub PrintReceiptservice(receipt As String)
+        Dim printDialog As New PrintDialog()
+        Dim printDocument As New Printing.PrintDocument()
+
+        ' Event to handle the printing of the receipt
+        AddHandler printDocument.PrintPage, Sub(sender, e)
+                                                e.Graphics.DrawString(receipt, New Font("Arial", 10), Brushes.Black, 100, 100)
+                                            End Sub
+
+        ' Show print dialog and print if the user accepts
+        If printDialog.ShowDialog() = DialogResult.OK Then
+            printDocument.Print()
+        End If
+    End Sub
+
+
+    Private Sub ClearServiceFields()
+        tb_servicemoneyamount.Clear()
+        tb_servicecost.Clear()
+        tb_servicechange.Clear()
+        cmb_servicename.SelectedIndex = -1
+    End Sub
+
 
     Private Sub LoadServiceDetails(serviceName As String)
         Dim query As String = "SELECT service_id, service_cost FROM services WHERE service_name = @service_name"
@@ -1060,14 +1352,15 @@ Public Class Form3
 
                 Using reader As SQLiteDataReader = cmd.ExecuteReader()
                     If reader.Read() Then
-                        ' Load service_id and service_cost
-                        tb_servicecost.Text = reader("service_cost").ToString()
+                        Dim serviceCost As Decimal = If(IsDBNull(reader("service_cost")), 0D, Convert.ToDecimal(reader("service_cost")))
+                        tb_servicecost.Text = serviceCost.ToString("F2")
                         tb_serviceid.Text = reader("service_id").ToString()
                     End If
                 End Using
             End Using
         End Using
     End Sub
+
 
     Private Sub ClearServiceTransactionFields()
         tb_servicecost.Clear()
@@ -1513,7 +1806,22 @@ Public Class Form3
                 Dim transaction As SQLiteTransaction = conn.BeginTransaction()
 
                 Try
+                    ' Debugging: Check if the correct supplier is being selected
+                    Dim checkSupplierQuery As String = "SELECT supplier_id, company_name, contact_person, contact_number, address, note FROM suppliers WHERE supplier_id=@supplier_id"
+                    Using checkCmd As New SQLiteCommand(checkSupplierQuery, conn, transaction)
+                        checkCmd.Parameters.AddWithValue("@supplier_id", selectedSupplierId)
+                        Using reader As SQLiteDataReader = checkCmd.ExecuteReader()
+                            If reader.Read() Then
+                                Console.WriteLine($"Archiving Supplier: {reader("company_name")}, {reader("contact_person")}")
+                            Else
+                                MessageBox.Show("Supplier not found.")
+                                transaction.Rollback()
+                                Return
+                            End If
+                        End Using
+                    End Using
 
+                    ' Archive the supplier
                     Dim rowsAffected As Integer = 0
                     Using archiveCmd As New SQLiteCommand(archiveQuery, conn, transaction)
                         archiveCmd.Parameters.AddWithValue("@supplier_id", selectedSupplierId)
@@ -1547,6 +1855,7 @@ Public Class Form3
             MessageBox.Show("Please select a supplier to archive.")
         End If
     End Sub
+
 
     Private Sub btn_unarchivesupplier_Click(sender As Object, e As EventArgs) Handles btn_unarchivesupplier.Click
         Dim unarchivedCount As Integer = 0
@@ -1726,6 +2035,7 @@ Public Class Form3
 
                     Dim unitCost As Object = cmd.ExecuteScalar()
                     If unitCost IsNot Nothing Then
+                        ' Format unit cost as decimal with two decimal places
                         tb_ropunitcost.Text = Convert.ToDecimal(unitCost).ToString("F2")
                     Else
                         tb_ropunitcost.Clear()
@@ -1736,6 +2046,7 @@ Public Class Form3
             MessageBox.Show("An error occurred: " & ex.Message)
         End Try
     End Sub
+
 
     Private Sub tb_ropquantitybrought_TextChanged(sender As Object, e As EventArgs) Handles tb_ropquantitybrought.TextChanged
 
@@ -1833,7 +2144,6 @@ Public Class Form3
                     conn.Open()
                     cmd.ExecuteNonQuery()
                     MessageBox.Show("Product return recorded successfully!")
-                    UpdateTotalFields()
                     LoadReturnedProducts()
                     ClearReturnProductFields()
                     LoadArchivedReturnedProducts()
@@ -1875,7 +2185,6 @@ Public Class Form3
     End Function
 
     Private selectedReturnId As Integer = 0
-
     Private Sub datatable_returnofproducts_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_returnofproducts.CellContentClick
         If e.ColumnIndex = datatable_returnofproducts.Columns("chkSelect").Index AndAlso e.RowIndex >= 0 Then
             Dim chkCell As DataGridViewCheckBoxCell = CType(datatable_returnofproducts.Rows(e.RowIndex).Cells("chkSelect"), DataGridViewCheckBoxCell)
@@ -1884,9 +2193,10 @@ Public Class Form3
             If CBool(chkCell.Value) = True Then
                 Dim row As DataGridViewRow = datatable_returnofproducts.Rows(e.RowIndex)
                 tb_ropproductname.SelectedItem = row.Cells("product_name").Value.ToString()
-                tb_ropunitcost.Text = row.Cells("unit_cost").Value.ToString()
+
+                tb_ropunitcost.Text = Convert.ToDecimal(row.Cells("unit_cost").Value).ToString("F2")
                 tb_ropquantitybrought.Text = row.Cells("return_quantity").Value.ToString()
-                tb_roprefundamount.Text = row.Cells("refund_amount").Value.ToString()
+                tb_roprefundamount.Text = Convert.ToDecimal(row.Cells("refund_amount").Value).ToString("F2")
                 tb_ropreason.SelectedItem = row.Cells("return_reason").Value.ToString()
                 dtp_returndatetime.Value = Convert.ToDateTime(row.Cells("return_date_time").Value)
                 cmb_roptransactionid.SelectedItem = row.Cells("transaction_id").Value.ToString()
@@ -2039,120 +2349,7 @@ Public Class Form3
         End Try
     End Sub
 
-    Private Sub UpdateTotalFields()
-        txt_totalearned_TextChanged(Nothing, Nothing)
-        txt_totalreturnedproducts_TextChanged(Nothing, Nothing)
-        txt_totalproductsales_TextChanged(Nothing, Nothing)
-        txt_totalservicesales_TextChanged(Nothing, Nothing)
-    End Sub
 
-
-    Private Sub txt_totalearned_TextChanged(sender As Object, e As EventArgs) Handles txt_totalearned.TextChanged
-        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
-        Dim connectionString As String = $"Data Source={dbPath};Version=3;"
-
-        Dim connection As SQLiteConnection = New SQLiteConnection(connectionString)
-
-
-        Try
-            connection.Open()
-            Dim query As String = "SELECT (SELECT SUM(total_cost) FROM product_transactions) + " &
-                                  "(SELECT SUM(service_cost) FROM service_transactions) AS total_earned;"
-            Dim cmd As SQLiteCommand = New SQLiteCommand(query, connection)
-
-            Dim result = cmd.ExecuteScalar()
-            If result IsNot DBNull.Value Then
-                txt_totalearned.Text = result.ToString()
-            Else
-                txt_totalearned.Text = "0"
-            End If
-
-        Catch ex As SQLiteException
-
-            MessageBox.Show("Database error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        Finally
-            connection.Close()
-        End Try
-    End Sub
-
-    Private Sub txt_totalreturnedproducts_TextChanged(sender As Object, e As EventArgs) Handles txt_totalreturnedproducts.TextChanged
-        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
-        Dim connectionString As String = $"Data Source={dbPath};Version=3;"
-
-        Dim connection As SQLiteConnection = New SQLiteConnection(connectionString)
-
-        Try
-            connection.Open()
-            Dim query As String = "SELECT SUM(return_quantity) AS total_returned_products FROM return_of_products;"
-            Dim cmd As SQLiteCommand = New SQLiteCommand(query, connection)
-
-            Dim result = cmd.ExecuteScalar()
-            If result IsNot DBNull.Value Then
-
-                txt_totalreturnedproducts.Text = result.ToString()
-            Else
-                txt_totalreturnedproducts.Text = "0"
-            End If
-
-        Catch ex As SQLiteException
-            MessageBox.Show("Database error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        Finally
-            connection.Close()
-        End Try
-    End Sub
-
-    Private Sub txt_totalproductsales_TextChanged(sender As Object, e As EventArgs) Handles txt_totalproductsales.TextChanged
-        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
-        Dim connectionString As String = $"Data Source={dbPath};Version=3;"
-        Dim connection As SQLiteConnection = New SQLiteConnection(connectionString)
-
-        Try
-            connection.Open()
-            Dim query As String = "SELECT SUM(total_cost) AS total_product_sales FROM product_transactions;"
-            Dim cmd As SQLiteCommand = New SQLiteCommand(query, connection)
-
-            Dim result = cmd.ExecuteScalar()
-            If result IsNot DBNull.Value Then
-                txt_totalproductsales.Text = result.ToString()
-            Else
-                txt_totalproductsales.Text = "0"
-            End If
-
-        Catch ex As SQLiteException
-            MessageBox.Show("Database error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        Finally
-            connection.Close()
-        End Try
-    End Sub
-
-    Private Sub txt_totalservicesales_TextChanged(sender As Object, e As EventArgs) Handles txt_totalservicesales.TextChanged
-        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
-        Dim connectionString As String = $"Data Source={dbPath};Version=3;"
-
-        Dim connection As SQLiteConnection = New SQLiteConnection(connectionString)
-
-        Try
-            connection.Open()
-            Dim query As String = "SELECT SUM(service_cost) AS total_service_sales FROM service_transactions;"
-            Dim cmd As SQLiteCommand = New SQLiteCommand(query, connection)
-
-            Dim result = cmd.ExecuteScalar()
-            If result IsNot DBNull.Value Then
-                txt_totalservicesales.Text = result.ToString()
-            Else
-                txt_totalservicesales.Text = "0"
-            End If
-
-        Catch ex As SQLiteException
-            MessageBox.Show("Database error: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        Finally
-            connection.Close()
-        End Try
-    End Sub
     Private Sub LoadTop5SellingProducts()
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
 
@@ -2192,7 +2389,6 @@ Public Class Form3
 
     Private Sub LoadReturnedProducts()
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
         Dim connectionString As String = $"Data Source={dbPath};Version=3;"
         Dim query As String = "SELECT product_name, SUM(return_quantity) AS total_returned, SUM(refund_amount) AS total_refunded " &
                           "FROM return_of_products " &
@@ -2201,15 +2397,14 @@ Public Class Form3
 
         Using connection As New SQLiteConnection(connectionString)
             Dim command As New SQLiteCommand(query, connection)
+            Dim dt As New DataTable()
 
             Try
                 connection.Open()
-                Dim dt As New DataTable()
                 Dim adapter As New SQLiteDataAdapter(command)
                 adapter.Fill(dt)
 
                 datatable_returnedproductssummary.DataSource = dt
-
                 datatable_returnedproductssummary.AutoResizeColumns()
 
             Catch ex As Exception
@@ -2218,7 +2413,15 @@ Public Class Form3
         End Using
     End Sub
 
-
+    ' Add the following event handler for formatting the DataGridView
+    Private Sub datatable_returnedproductssummary_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles datatable_returnedproductssummary.CellFormatting
+        If e.ColumnIndex = datatable_returnedproductssummary.Columns("total_refunded").Index Then
+            If e.Value IsNot Nothing AndAlso IsNumeric(e.Value) Then
+                e.Value = String.Format("{0:N2}", e.Value) ' Format to two decimal places
+                e.FormattingApplied = True
+            End If
+        End If
+    End Sub
 
     Private Sub datatable_top5sellingproducts_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_top5sellingproducts.CellContentClick
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
@@ -2251,12 +2454,21 @@ Public Class Form3
         End Using
     End Sub
 
-    Private Sub datatable_lowstockproducts_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_lowstockproducts.CellContentClick
+    Private Sub LoadServiceSalesReport()
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
         Dim connectionString As String = $"Data Source={dbPath};Version=3;"
 
-        Dim query As String = "SELECT product_name, quantity_in_stock FROM products WHERE quantity_in_stock < 25;"
+        ' SQL query to get aggregated sales report data for services
+        Dim query As String = "
+    SELECT 
+        s.service_name,
+        SUM(st.amount_paid) AS TotalRevenue,
+        SUM(st.change_given) AS TotalChangeGiven,
+        COUNT(st.transaction_id) AS TotalTransactions
+    FROM service_transactions st
+    JOIN services s ON st.service_id = s.service_id
+    GROUP BY s.service_name
+    ORDER BY TotalRevenue DESC;"
 
         Using connection As New SQLiteConnection(connectionString)
             Dim command As New SQLiteCommand(query, connection)
@@ -2267,26 +2479,89 @@ Public Class Form3
                 Dim dt As New DataTable()
                 dt.Load(reader)
 
-                datatable_lowstockproducts.Rows.Clear()
+                datatable_salesreportservice.Rows.Clear()
+                datatable_salesreportservice.Columns.Clear()
 
+                ' Add columns for the aggregated sales report
+                datatable_salesreportservice.Columns.Add("ServiceName", "Service Name")
+                datatable_salesreportservice.Columns.Add("TotalRevenue", "Total Revenue")
+                datatable_salesreportservice.Columns.Add("TotalChangeGiven", "Total Change Given")
+                datatable_salesreportservice.Columns.Add("TotalTransactions", "Total Transactions")
+
+                ' Populate DataGridView with data
                 For Each row As DataRow In dt.Rows
-                    datatable_lowstockproducts.Rows.Add(row("product_name"), row("quantity_in_stock"))
+                    datatable_salesreportservice.Rows.Add(
+                    row("service_name"),
+                    Convert.ToDecimal(row("TotalRevenue")).ToString("N2"),       ' Format to 2 decimal places
+                    Convert.ToDecimal(row("TotalChangeGiven")).ToString("N2"),  ' Format to 2 decimal places
+                    row("TotalTransactions")
+                )
                 Next
 
-                datatable_lowstockproducts.AutoResizeColumns()
-
+                datatable_salesreportservice.AutoResizeColumns()
             Catch ex As Exception
                 MessageBox.Show("An error occurred: " & ex.Message)
             End Try
         End Using
     End Sub
 
-    Private Sub LoadLowStockProducts()
-        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
 
+    Private Sub LoadSalesReport()
+        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
         Dim connectionString As String = $"Data Source={dbPath};Version=3;"
 
-        Dim query As String = "SELECT product_name, quantity_in_stock FROM products WHERE quantity_in_stock < 25;"
+        ' SQL query to get aggregated sales report data
+        Dim query As String = "SELECT p.product_name, " &
+                          "SUM(pt.quantity) AS TotalQuantitySold, " &
+                          "SUM(pt.total_cost) AS TotalSalesRevenue, " &
+                          "AVG(pt.unit_cost) AS AverageUnitCost " &
+                          "FROM product_transactions pt " &
+                          "INNER JOIN products p ON pt.product_id = p.product_id " &
+                          "GROUP BY p.product_name " &
+                          "ORDER BY TotalSalesRevenue DESC;"
+
+        Using connection As New SQLiteConnection(connectionString)
+            Dim command As New SQLiteCommand(query, connection)
+
+            Try
+                connection.Open()
+                Dim reader As SQLiteDataReader = command.ExecuteReader()
+                Dim dt As New DataTable()
+                dt.Load(reader)
+
+                datatable_salesreportproduct.Rows.Clear()
+                datatable_salesreportproduct.Columns.Clear()
+
+                ' Add columns for the aggregated sales report
+                datatable_salesreportproduct.Columns.Add("ProductName", "Product Name")
+                datatable_salesreportproduct.Columns.Add("TotalQuantitySold", "Total Quantity Sold")
+                datatable_salesreportproduct.Columns.Add("TotalSalesRevenue", "Total Sales Revenue")
+                datatable_salesreportproduct.Columns.Add("AverageUnitCost", "Average Unit Cost")
+
+                ' Populate DataGridView with data
+                For Each row As DataRow In dt.Rows
+                    datatable_salesreportproduct.Rows.Add(
+                    row("product_name"),
+                    row("TotalQuantitySold"),
+                    Convert.ToDecimal(row("TotalSalesRevenue")).ToString("N2"),   ' Format to 2 decimal places
+                    Convert.ToDecimal(row("AverageUnitCost")).ToString("N2")      ' Format to 2 decimal places
+                )
+                Next
+
+                datatable_salesreportproduct.AutoResizeColumns()
+            Catch ex As Exception
+                MessageBox.Show("An error occurred: " & ex.Message)
+            End Try
+        End Using
+    End Sub
+
+
+
+    Private Sub LoadLowStockProducts()
+        Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
+        Dim connectionString As String = $"Data Source={dbPath};Version=3;"
+
+        Dim query As String = "SELECT product_name, quantity_in_stock FROM products WHERE quantity_in_stock < 15;"
 
         Using connection As New SQLiteConnection(connectionString)
             Dim command As New SQLiteCommand(query, connection)
@@ -2300,6 +2575,7 @@ Public Class Form3
                 datatable_lowstockproducts.Rows.Clear()
                 datatable_lowstockproducts.Columns.Clear()
 
+                ' Add columns for product name and quantity in stock
                 datatable_lowstockproducts.Columns.Add("ProductName", "Product Name")
                 datatable_lowstockproducts.Columns.Add("QuantityInStock", "Quantity in Stock")
 
@@ -2315,6 +2591,22 @@ Public Class Form3
         End Using
     End Sub
 
+    Private Sub datatable_lowstockproducts_CellContentClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_lowstockproducts.CellContentClick
+        ' Ensure you only handle valid cell clicks
+        If e.RowIndex < 0 Then Return
+
+        ' For now, we'll just show the product details without reordering
+        Dim productName As String = datatable_lowstockproducts.Rows(e.RowIndex).Cells("ProductName").Value.ToString()
+        Dim currentQuantity As Integer = Integer.Parse(datatable_lowstockproducts.Rows(e.RowIndex).Cells("QuantityInStock").Value.ToString())
+
+        ' Show product details
+        Dim detailsMessage As String = $"Product Name: {productName}" & vbCrLf &
+                                    $"Current Stock: {currentQuantity}"
+        MessageBox.Show(detailsMessage, "Product Details")
+    End Sub
+
+
+
     Private Sub LoadSalesByMonth()
         ' SQLite connection string
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
@@ -2326,11 +2618,9 @@ Public Class Form3
         Dim currentYear As Integer = currentDate.Year
         Dim currentMonth As Integer = currentDate.Month
 
-        ' Define the start and end dates for the current month
-        Dim startDate As New DateTime(currentYear, currentMonth, 1) ' First day of the current month
+        Dim startDate As New DateTime(currentYear, currentMonth, 1)
         Dim endDate As New DateTime(currentYear, currentMonth, DateTime.DaysInMonth(currentYear, currentMonth)) ' Last day of the current month
 
-        ' Adjusted query for SQLite using strftime for year and month extraction
         Dim query As String = "SELECT strftime('%Y-%m', pt.transaction_date_time) AS sales_month, " &
                           "SUM(pt.total_cost) AS total_product_sales, " &
                           "(SELECT SUM(st.service_cost) FROM service_transactions st " &
@@ -2340,7 +2630,6 @@ Public Class Form3
                           "GROUP BY sales_month " &
                           "ORDER BY sales_month;"
 
-        ' Open connection and execute query
         Using connection As New SQLiteConnection(connectionString)
             Dim command As New SQLiteCommand(query, connection)
             command.Parameters.AddWithValue("@startDate", startDate.ToString("yyyy-MM-dd"))
@@ -2361,14 +2650,11 @@ Public Class Form3
                 datatable_salesbymonth.Columns.Add("TotalProductSales", "Total Product Sales")
                 datatable_salesbymonth.Columns.Add("TotalServiceSales", "Total Service Sales")
 
-                ' Add rows with the results
                 For Each row As DataRow In dt.Rows
                     datatable_salesbymonth.Rows.Add(row("sales_month"),
-                                                 If(IsDBNull(row("total_product_sales")), 0, row("total_product_sales")),
-                                                 If(IsDBNull(row("total_service_sales")), 0, row("total_service_sales")))
+                                         If(IsDBNull(row("total_product_sales")), 0, Convert.ToDecimal(row("total_product_sales")).ToString("F2")),
+                                         If(IsDBNull(row("total_service_sales")), 0, Convert.ToDecimal(row("total_service_sales")).ToString("F2")))
                 Next
-
-                ' Auto resize the columns for better display
                 datatable_salesbymonth.AutoResizeColumns()
 
             Catch ex As Exception
@@ -2420,8 +2706,8 @@ Public Class Form3
 
                 For Each row As DataRow In dt.Rows
                     datatable_salesbydaily.Rows.Add(row("sales_date"),
-                                                 If(IsDBNull(row("total_product_sales")), 0, row("total_product_sales")),
-                                                 If(IsDBNull(row("total_service_sales")), 0, row("total_service_sales")))
+                                         If(IsDBNull(row("total_product_sales")), 0, Convert.ToDecimal(row("total_product_sales")).ToString("F2")),
+                                         If(IsDBNull(row("total_service_sales")), 0, Convert.ToDecimal(row("total_service_sales")).ToString("F2")))
                 Next
 
                 datatable_salesbydaily.AutoResizeColumns()
@@ -2437,14 +2723,13 @@ Public Class Form3
     Private Sub LoadSalesByWeek()
         Dim currentDate As DateTime = DateTime.Now
 
-        ' Calculate the start date (Monday) and end date (Sunday) of the current week
         Dim startDate As DateTime = currentDate.AddDays(-(CInt(currentDate.DayOfWeek + 6) Mod 7)) ' Start on Monday
-        Dim endDate As DateTime = startDate.AddDays(6) ' End on Sunday
+        Dim endDate As DateTime = startDate.AddDays(6)
 
-        ' Check if the week has passed and move to the next week
+
         If currentDate > endDate Then
-            startDate = startDate.AddDays(7) ' Move to the next week
-            endDate = endDate.AddDays(7) ' Move to the next week
+            startDate = startDate.AddDays(7)
+            endDate = endDate.AddDays(7)
         End If
 
         ' Adjusted query for SQLite
@@ -2487,18 +2772,15 @@ Public Class Form3
                 datatable_salesbyweek.Columns.Add("TotalProductSales", "Total Product Sales")
                 datatable_salesbyweek.Columns.Add("TotalServiceSales", "Total Service Sales")
 
-                ' Add rows with the results
                 For Each row As DataRow In dt.Rows
                     datatable_salesbyweek.Rows.Add(row("sales_week"),
-                                                row("total_product_sales"),
-                                                If(IsDBNull(row("total_service_sales")), 0, row("total_service_sales")))
+                                        If(IsDBNull(row("total_product_sales")), 0, Convert.ToDecimal(row("total_product_sales")).ToString("F2")),
+                                        If(IsDBNull(row("total_service_sales")), 0, Convert.ToDecimal(row("total_service_sales")).ToString("F2")))
                 Next
 
-                ' Auto resize the columns for better display
                 datatable_salesbyweek.AutoResizeColumns()
 
             Catch ex As Exception
-                ' Display any errors that occur
                 MessageBox.Show("An error occurred: " & ex.Message)
             End Try
         End Using
@@ -2615,6 +2897,7 @@ Public Class Form3
 
                     datatable_archiveproducts.DataSource = dt
 
+                    ' Add checkbox column if it doesn't exist
                     If Not datatable_archiveproducts.Columns.Contains("chkSelect") Then
                         Dim chkSelectColumn As New DataGridViewCheckBoxColumn()
                         chkSelectColumn.Name = "chkSelect"
@@ -2622,8 +2905,17 @@ Public Class Form3
                         datatable_archiveproducts.Columns.Insert(0, chkSelectColumn)
                     End If
 
+                    ' Initialize checkbox values
                     For Each row As DataGridViewRow In datatable_archiveproducts.Rows
                         row.Cells("chkSelect").Value = False
+                    Next
+
+                    ' Format relevant columns with two decimal places
+                    Dim decimalColumns As String() = {"unit_price", "total_cost", "remaining_stock_value"}
+                    For Each colName As String In decimalColumns
+                        If datatable_archiveproducts.Columns.Contains(colName) Then
+                            datatable_archiveproducts.Columns(colName).DefaultCellStyle.Format = "F2"
+                        End If
                     Next
 
                 Catch ex As Exception
@@ -2632,7 +2924,6 @@ Public Class Form3
             End Using
         End Using
     End Sub
-
 
     Private Sub InsertIntoProducts(productId As Integer, supplierId As Integer, productName As String, unitPrice As Decimal, quantityInStock As Integer, unitOfMeasurement As String, totalCost As Decimal, remainingStockValue As Integer, sold As Integer)
         ' SQL insert statement
@@ -2670,7 +2961,6 @@ Public Class Form3
         End Using
     End Sub
 
-
     Private Sub SetupChart()
         Chart1.Series.Clear()
 
@@ -2700,14 +2990,20 @@ Public Class Form3
             MessageBox.Show("Error fetching sales data: " & ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Exit Sub
         End Try
+        series.Points.AddXY("Total Products Earned", totalProductSales) ' Use totalProductSales as Y value
+        series.Points(series.Points.Count - 1).Label = totalProductSales.ToString("N2") ' Display only the numeric value inside the pie chart
+        series.Points(series.Points.Count - 1).LegendText = "Total Products Earned" ' Label for the legend
 
-        series.Points.AddXY("Total Products Earned", totalProductSales)
-        series.Points.AddXY("Total Services Earned", totalServiceSales)
+        series.Points.AddXY("Total Services Earned", totalServiceSales) ' Use totalServiceSales as Y value
+        series.Points(series.Points.Count - 1).Label = totalServiceSales.ToString("N2") ' Display only the numeric value inside the pie chart
+        series.Points(series.Points.Count - 1).LegendText = "Total Services Earned" ' Label for the legend
+
 
         Chart1.Titles.Clear()
         Chart1.Titles.Add("Overall Sales")
-    End Sub
+        Chart1.Titles(0).Font = New Font("Arial", 14, FontStyle.Bold)
 
+    End Sub
 
     Private WithEvents printDocProducts As New PrintDocument()
     Private WithEvents printDocServices As New PrintDocument()
@@ -2719,15 +3015,15 @@ Public Class Form3
         PrintPreviewDialog1.ShowDialog()
     End Sub
 
-
+    Private currentRowIndex As Integer = 0
 
     Private Sub btn_printstr_Click(sender As Object, e As EventArgs) Handles btn_printstr.Click
+        ' Reset the row index at the beginning of printing
+        currentRowIndex = 0
         PrintPreviewDialog1.Document = printDocServices
         printDocServices.DefaultPageSettings.Landscape = True
         PrintPreviewDialog1.ShowDialog()
     End Sub
-
-
 
     Private currentRow As Integer = 0
     Private Sub printDocProducts_PrintPage(sender As Object, e As PrintPageEventArgs) Handles printDocProducts.PrintPage
@@ -2834,9 +3130,6 @@ Public Class Form3
         currentRow = 0
     End Sub
 
-
-
-
     Private Function WrapText(ByVal text As String, ByVal font As Font, ByVal maxWidth As Integer) As String()
         Dim words As String() = text.Split(" "c)
         Dim lines As New List(Of String)
@@ -2868,22 +3161,20 @@ Public Class Form3
         Dim pen As New Pen(Color.Black, 1)
 
         Dim startY As Integer = e.MarginBounds.Top
-
         Dim cellHeight As Integer = 50
         Dim cellWidth As Integer = 140
+        Dim padding As Integer = 5
+        Dim startX As Integer = e.MarginBounds.Left
 
-
+        ' Draw title
         Dim titleText As String = "Service Transaction Records"
         Dim titleSize As SizeF = e.Graphics.MeasureString(titleText, titleFont)
         Dim titleX As Integer = (e.MarginBounds.Width - titleSize.Width) / 2 + e.MarginBounds.Left
         e.Graphics.DrawString(titleText, titleFont, brush, titleX, startY)
-        startY += 40
+        startY += 60
 
-        Dim startX As Integer = e.MarginBounds.Left
         For Each col As DataGridViewColumn In datatable_servicetransactions.Columns
-
             e.Graphics.DrawRectangle(pen, startX, startY, cellWidth, cellHeight)
-
             Dim textSize As SizeF = e.Graphics.MeasureString(col.HeaderText, font)
             Dim textX As Integer = startX + (cellWidth - textSize.Width) / 2
             Dim textY As Integer = startY + (cellHeight - textSize.Height) / 2
@@ -2894,13 +3185,16 @@ Public Class Form3
         startX = e.MarginBounds.Left
         startY += cellHeight
 
-        For Each row As DataGridViewRow In datatable_servicetransactions.Rows
+        For i As Integer = currentRowIndex To datatable_servicetransactions.Rows.Count - 1
+            Dim row As DataGridViewRow = datatable_servicetransactions.Rows(i)
+
             If Not row.IsNewRow Then
                 For Each cell As DataGridViewCell In row.Cells
                     ' Draw cell rectangle
                     e.Graphics.DrawRectangle(pen, startX, startY, cellWidth, cellHeight)
 
-                    Dim cellValue As String = cell.Value.ToString()
+                    ' Center cell text
+                    Dim cellValue As String = If(cell.Value IsNot Nothing, cell.Value.ToString(), "")
                     Dim cellTextSize As SizeF = e.Graphics.MeasureString(cellValue, font)
                     Dim cellTextX As Integer = startX + (cellWidth - cellTextSize.Width) / 2
                     Dim cellTextY As Integer = startY + (cellHeight - cellTextSize.Height) / 2
@@ -2908,17 +3202,20 @@ Public Class Form3
 
                     startX += cellWidth
                 Next
+
                 startX = e.MarginBounds.Left
                 startY += cellHeight
 
                 If startY + cellHeight > e.MarginBounds.Bottom Then
                     e.HasMorePages = True
+                    currentRowIndex = i + 1
                     Exit Sub
                 End If
             End If
         Next
 
         e.HasMorePages = False
+        currentRowIndex = 0
     End Sub
 
     Private Sub InsertIntoReturnOfProducts(returnId As Integer, productId As Integer, productName As String, unitCost As Decimal, returnQuantity As Integer, refundAmount As Decimal, returnReason As String, returnDateTime As DateTime, transactionId As Integer)
@@ -2955,7 +3252,6 @@ Public Class Form3
     Private Sub LoadArchivedReturnedProducts()
         ' SQLite connection string with full path to the database
         Dim dbPath As String = "C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db"
-
         Dim connectionString As String = $"Data Source={dbPath};Version=3;"
 
         ' SQLite query to select data from the archived_returned_products table
@@ -2985,6 +3281,14 @@ Public Class Form3
                     datatable_archivereturnedproducts.Columns.Insert(0, chkSelectColumn)
                 End If
 
+                ' Format relevant columns with two decimal places
+                Dim decimalColumns As String() = {"unit_cost", "refund_amount"}
+                For Each colName As String In decimalColumns
+                    If datatable_archivereturnedproducts.Columns.Contains(colName) Then
+                        datatable_archivereturnedproducts.Columns(colName).DefaultCellStyle.Format = "F2"
+                    End If
+                Next
+
                 ' Auto-resize columns for a better fit
                 datatable_archivereturnedproducts.AutoResizeColumns()
 
@@ -2994,6 +3298,7 @@ Public Class Form3
             End Try
         End Using
     End Sub
+
 
 
     Private Sub btn_archiverop_Click(sender As Object, e As EventArgs) Handles btn_archiverop.Click
@@ -3131,6 +3436,277 @@ Public Class Form3
         Else
             LoadArchivedReturnedProducts()
         End If
+    End Sub
+    Private Sub LoadRecentTransactions()
+        Dim recentTransactions As DataTable = GetRecentTransactions()
+        datatable_recenttransactions.DataSource = recentTransactions
+    End Sub
+
+    Private Function GetRecentTransactions() As DataTable
+        Dim recentTransactionsTable As New DataTable()
+
+        ' Define the connection string
+        Dim connectionString As String = "Data Source=C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db;Version=3;"
+
+        Using connection As New SQLiteConnection(connectionString)
+            connection.Open()
+
+            ' Create the DataTable structure
+            recentTransactionsTable.Columns.Add("Transaction Type")
+            recentTransactionsTable.Columns.Add("Transaction ID")
+            recentTransactionsTable.Columns.Add("Name")
+            recentTransactionsTable.Columns.Add("Total Cost")
+            recentTransactionsTable.Columns.Add("Transaction Time")
+
+            ' Query for recent service transactions
+            Dim serviceQuery As String = "SELECT transaction_id, service_name, service_cost AS total_cost, transaction_date_time FROM service_transactions ORDER BY transaction_date_time DESC LIMIT 10"
+            Using serviceCommand As New SQLiteCommand(serviceQuery, connection)
+                Using reader As SQLiteDataReader = serviceCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        recentTransactionsTable.Rows.Add("Service", reader("transaction_id"), reader("service_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+
+            ' Query for recent product transactions
+            Dim productQuery As String = "SELECT transaction_id, product_name, total_cost, transaction_date_time FROM product_transactions ORDER BY transaction_date_time DESC LIMIT 10"
+            Using productCommand As New SQLiteCommand(productQuery, connection)
+                Using reader As SQLiteDataReader = productCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        recentTransactionsTable.Rows.Add("Product", reader("transaction_id"), reader("product_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return recentTransactionsTable
+    End Function
+    Private Sub SetupRecentTransactionsDataGridView(dataGridView As DataGridView)
+        ' Set the DataSource for your DataGridView
+        dataGridView.DataSource = GetRecentTransactions()
+
+        ' Adjust row headers
+        dataGridView.RowHeadersVisible = True ' Ensure row headers are visible
+        dataGridView.RowHeadersWidth = 60 ' Increase width for more space in row headers
+
+        ' Optional: Set row header style
+        dataGridView.RowHeadersDefaultCellStyle.BackColor = Color.LightGray
+        dataGridView.RowHeadersDefaultCellStyle.Font = New Font("Arial", 10, FontStyle.Bold)
+        dataGridView.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+        ' Adjust row header padding (using a workaround)
+        dataGridView.RowHeadersDefaultCellStyle.Padding = New Padding(5) ' Add padding to row headers
+
+        ' Optional: Add a title to the row header
+        For i As Integer = 0 To dataGridView.Rows.Count - 1
+            dataGridView.Rows(i).HeaderCell.Value = (i + 1).ToString() ' Adding sequential numbers to the row header
+        Next
+    End Sub
+
+    Private Function GetDailyTransactionHistory() As DataTable
+        Dim dailyTransactionsTable As New DataTable()
+
+        ' Define the connection string
+        Dim connectionString As String = "Data Source=C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db;Version=3;"
+
+        Using connection As New SQLiteConnection(connectionString)
+            connection.Open()
+
+            ' Create the DataTable structure
+            dailyTransactionsTable.Columns.Add("Transaction Type")
+            dailyTransactionsTable.Columns.Add("Transaction ID")
+            dailyTransactionsTable.Columns.Add("Name")
+            dailyTransactionsTable.Columns.Add("Total Cost")
+            dailyTransactionsTable.Columns.Add("Transaction Time")
+
+            ' Get today's date in the correct format (YYYY-MM-DD)
+            Dim today As String = DateTime.Now.ToString("yyyy-MM-dd")
+
+            ' Query for service transactions for today's date
+            Dim serviceQuery As String = "SELECT transaction_id, service_name, service_cost AS total_cost, transaction_date_time " &
+                                      "FROM service_transactions " &
+                                      "WHERE DATE(transaction_date_time) = @today"
+            Using serviceCommand As New SQLiteCommand(serviceQuery, connection)
+                serviceCommand.Parameters.AddWithValue("@today", today)
+                Using reader As SQLiteDataReader = serviceCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        dailyTransactionsTable.Rows.Add("Service", reader("transaction_id"), reader("service_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+
+            ' Query for product transactions for today's date
+            Dim productQuery As String = "SELECT transaction_id, product_name, total_cost, transaction_date_time " &
+                                      "FROM product_transactions " &
+                                      "WHERE DATE(transaction_date_time) = @today"
+            Using productCommand As New SQLiteCommand(productQuery, connection)
+                productCommand.Parameters.AddWithValue("@today", today)
+                Using reader As SQLiteDataReader = productCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        dailyTransactionsTable.Rows.Add("Product", reader("transaction_id"), reader("product_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return dailyTransactionsTable
+    End Function
+
+    Private Sub SetupDailyTransactionHistoryDataGridView()
+        ' Set the DataSource for your DataGridView
+        datatable_salesbydailytransactionhistory.DataSource = GetDailyTransactionHistory()
+
+        ' Hide row headers
+        datatable_salesbydailytransactionhistory.RowHeadersVisible = False ' Hides the row headers
+
+        ' Optionally adjust the width of the row headers if you want to keep them visible
+        ' datatable_salesbydailytransactionhistory.RowHeadersWidth = 0 ' Set to 0 to effectively hide them
+
+        ' Optional: Set other styles
+        datatable_salesbydailytransactionhistory.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke
+
+        ' Adjust column widths
+        datatable_salesbydailytransactionhistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+        ' Adjust other properties
+        datatable_salesbydailytransactionhistory.RowHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke
+        datatable_salesbydailytransactionhistory.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+
+        ' Optional: Add a title to the row header if you keep them
+        For i As Integer = 0 To datatable_salesbydailytransactionhistory.Rows.Count - 1
+            datatable_salesbydailytransactionhistory.Rows(i).HeaderCell.Value = (i + 1).ToString() ' Adding sequential numbers to the row header
+        Next
+    End Sub
+
+    Private Function GetWeeklyTransactionHistory() As DataTable
+        Dim weeklyTransactionsTable As New DataTable()
+
+        ' Define the connection string
+        Dim connectionString As String = "Data Source=C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db;Version=3;"
+
+        Using connection As New SQLiteConnection(connectionString)
+            connection.Open()
+
+            ' Create the DataTable structure
+            weeklyTransactionsTable.Columns.Add("Transaction Type")
+            weeklyTransactionsTable.Columns.Add("Transaction ID")
+            weeklyTransactionsTable.Columns.Add("Name")
+            weeklyTransactionsTable.Columns.Add("Total Cost")
+            weeklyTransactionsTable.Columns.Add("Transaction Time")
+
+            ' Query for service transactions for the current week
+            Dim serviceQuery As String = "SELECT transaction_id, service_name, service_cost AS total_cost, transaction_date_time " &
+                                      "FROM service_transactions " &
+                                      "WHERE strftime('%Y-%m-%d', transaction_date_time) BETWEEN date('now', 'weekday 0', '-6 days') AND date('now', 'weekday 0')"
+            Using serviceCommand As New SQLiteCommand(serviceQuery, connection)
+                Using reader As SQLiteDataReader = serviceCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        weeklyTransactionsTable.Rows.Add("Service", reader("transaction_id"), reader("service_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+
+            ' Query for product transactions for the current week
+            Dim productQuery As String = "SELECT transaction_id, product_name, total_cost, transaction_date_time " &
+                                      "FROM product_transactions " &
+                                      "WHERE strftime('%Y-%m-%d', transaction_date_time) BETWEEN date('now', 'weekday 0', '-6 days') AND date('now', 'weekday 0')"
+            Using productCommand As New SQLiteCommand(productQuery, connection)
+                Using reader As SQLiteDataReader = productCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        weeklyTransactionsTable.Rows.Add("Product", reader("transaction_id"), reader("product_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return weeklyTransactionsTable
+    End Function
+
+    Private Function GetMonthlyTransactionHistory() As DataTable
+        Dim monthlyTransactionsTable As New DataTable()
+
+        ' Define the connection string
+        Dim connectionString As String = "Data Source=C:\Users\Admin\source\repos\ic_electronics_center_app\ic_electronics_center_app\ic_electronics.db;Version=3;"
+
+        Using connection As New SQLiteConnection(connectionString)
+            connection.Open()
+
+            ' Create the DataTable structure
+            monthlyTransactionsTable.Columns.Add("Transaction Type")
+            monthlyTransactionsTable.Columns.Add("Transaction ID")
+            monthlyTransactionsTable.Columns.Add("Name")
+            monthlyTransactionsTable.Columns.Add("Total Cost")
+            monthlyTransactionsTable.Columns.Add("Transaction Time")
+
+            ' Query for service transactions for the current month
+            Dim serviceQuery As String = "SELECT transaction_id, service_name, service_cost AS total_cost, transaction_date_time " &
+                                      "FROM service_transactions " &
+                                      "WHERE strftime('%Y-%m', transaction_date_time) = strftime('%Y-%m', 'now')"
+            Using serviceCommand As New SQLiteCommand(serviceQuery, connection)
+                Using reader As SQLiteDataReader = serviceCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        monthlyTransactionsTable.Rows.Add("Service", reader("transaction_id"), reader("service_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+
+            ' Query for product transactions for the current month
+            Dim productQuery As String = "SELECT transaction_id, product_name, total_cost, transaction_date_time " &
+                                      "FROM product_transactions " &
+                                      "WHERE strftime('%Y-%m', transaction_date_time) = strftime('%Y-%m', 'now')"
+            Using productCommand As New SQLiteCommand(productQuery, connection)
+                Using reader As SQLiteDataReader = productCommand.ExecuteReader()
+                    While reader.Read()
+                        Dim totalCost As Decimal = Convert.ToDecimal(reader("total_cost"))
+                        monthlyTransactionsTable.Rows.Add("Product", reader("transaction_id"), reader("product_name"), totalCost.ToString("F2"), reader("transaction_date_time"))
+                    End While
+                End Using
+            End Using
+        End Using
+
+        Return monthlyTransactionsTable
+    End Function
+    Private Sub SetupWeeklyTransactionHistoryDataGridView()
+        ' Set the DataSource for your DataGridView
+        datatable_salesbyweeklytransactionhistory.DataSource = GetWeeklyTransactionHistory()
+
+        ' Hide row headers
+        datatable_salesbyweeklytransactionhistory.RowHeadersVisible = False
+
+        ' Optional: Set other styles
+        datatable_salesbyweeklytransactionhistory.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke
+
+        ' Adjust column widths
+        datatable_salesbyweeklytransactionhistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+        ' Adjust other properties
+        datatable_salesbyweeklytransactionhistory.RowHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke
+        datatable_salesbyweeklytransactionhistory.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
+    End Sub
+
+    Private Sub SetupMonthlyTransactionHistoryDataGridView()
+        ' Set the DataSource for your DataGridView
+        datatable_salesbymonthlytransactionhistory.DataSource = GetMonthlyTransactionHistory()
+
+        ' Hide row headers
+        datatable_salesbymonthlytransactionhistory.RowHeadersVisible = False
+
+        ' Optional: Set other styles
+        datatable_salesbymonthlytransactionhistory.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke
+
+        ' Adjust column widths
+        datatable_salesbymonthlytransactionhistory.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
+
+        ' Adjust other properties
+        datatable_salesbymonthlytransactionhistory.RowHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke
+        datatable_salesbymonthlytransactionhistory.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
     End Sub
 
 End Class

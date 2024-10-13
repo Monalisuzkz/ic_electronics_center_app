@@ -1,9 +1,9 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class Form1
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()> _
+    <System.Diagnostics.DebuggerNonUserCode()>
     Protected Overrides Sub Dispose(ByVal disposing As Boolean)
         Try
             If disposing AndAlso components IsNot Nothing Then
@@ -20,7 +20,7 @@ Partial Class Form1
     'NOTE: The following procedure is required by the Windows Form Designer
     'It can be modified using the Windows Form Designer.  
     'Do not modify it using the code editor.
-    <System.Diagnostics.DebuggerStepThrough()> _
+    <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(Form1))
         Me.Guna2HtmlLabel1 = New Guna.UI2.WinForms.Guna2HtmlLabel()
@@ -30,7 +30,6 @@ Partial Class Form1
         Me.GunaLabel1 = New Guna.UI.WinForms.GunaLabel()
         Me.GunaLabel2 = New Guna.UI.WinForms.GunaLabel()
         Me.btn_exit = New Guna.UI2.WinForms.Guna2Button()
-        Me.txt_createacc = New Guna.UI.WinForms.GunaLabel()
         Me.SuspendLayout()
         '
         'Guna2HtmlLabel1
@@ -155,18 +154,6 @@ Partial Class Form1
         Me.btn_exit.TabIndex = 8
         Me.btn_exit.Text = "Exit"
         '
-        'txt_createacc
-        '
-        Me.txt_createacc.AutoSize = True
-        Me.txt_createacc.BackColor = System.Drawing.Color.Transparent
-        Me.txt_createacc.Cursor = System.Windows.Forms.Cursors.Hand
-        Me.txt_createacc.Font = New System.Drawing.Font("Microsoft Sans Serif", 10.0!)
-        Me.txt_createacc.Location = New System.Drawing.Point(190, 450)
-        Me.txt_createacc.Name = "txt_createacc"
-        Me.txt_createacc.Size = New System.Drawing.Size(189, 25)
-        Me.txt_createacc.TabIndex = 9
-        Me.txt_createacc.Text = "Create account here"
-        '
         'Form1
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(12.0!, 25.0!)
@@ -176,7 +163,6 @@ Partial Class Form1
         Me.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.ClientSize = New System.Drawing.Size(578, 544)
         Me.ControlBox = False
-        Me.Controls.Add(Me.txt_createacc)
         Me.Controls.Add(Me.btn_exit)
         Me.Controls.Add(Me.GunaLabel2)
         Me.Controls.Add(Me.GunaLabel1)
@@ -205,5 +191,4 @@ Partial Class Form1
     Friend WithEvents GunaLabel1 As Guna.UI.WinForms.GunaLabel
     Friend WithEvents GunaLabel2 As Guna.UI.WinForms.GunaLabel
     Friend WithEvents btn_exit As Guna2Button
-    Friend WithEvents txt_createacc As GunaLabel
 End Class

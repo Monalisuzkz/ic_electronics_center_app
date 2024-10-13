@@ -20,6 +20,8 @@ Public Class Form2
         LoadSuppliers()
         LoadProducts()
         LoadProductDetails(ProductName)
+        LoadArchivedProducts()
+        LoadArchivedSuppliers()
 
     End Sub
 
@@ -64,7 +66,6 @@ Public Class Form2
             Using cmd As New SQLiteCommand(query, conn)
                 conn.Open()
                 Using reader As SQLiteDataReader = cmd.ExecuteReader()
-
                     Dim dt As New DataTable()
                     dt.Load(reader)
                     datatable_products.DataSource = dt
@@ -72,12 +73,21 @@ Public Class Form2
             End Using
         End Using
 
+        ' Add a checkbox column if it doesn't exist
         If datatable_products.Columns.Contains("chkSelect") = False Then
             Dim chkColumn As New DataGridViewCheckBoxColumn()
             chkColumn.HeaderText = "Select"
             chkColumn.Name = "chkSelect"
             datatable_products.Columns.Insert(0, chkColumn)
         End If
+
+        ' Format specific numeric columns to two decimal places
+        Dim decimalColumns As String() = {"unit_price", "total_cost", "remaining_stock_value"}
+        For Each colName As String In decimalColumns
+            If datatable_products.Columns.Contains(colName) Then
+                datatable_products.Columns(colName).DefaultCellStyle.Format = "F2"
+            End If
+        Next
 
         datatable_products.AutoResizeColumns()
     End Sub
@@ -722,6 +732,7 @@ Public Class Form2
 
                     datatable_archiveproducts.DataSource = dt
 
+                    ' Add checkbox column if it doesn't exist
                     If Not datatable_archiveproducts.Columns.Contains("chkSelect") Then
                         Dim chkSelectColumn As New DataGridViewCheckBoxColumn()
                         chkSelectColumn.Name = "chkSelect"
@@ -729,8 +740,17 @@ Public Class Form2
                         datatable_archiveproducts.Columns.Insert(0, chkSelectColumn)
                     End If
 
+                    ' Initialize checkbox values
                     For Each row As DataGridViewRow In datatable_archiveproducts.Rows
                         row.Cells("chkSelect").Value = False
+                    Next
+
+                    ' Format relevant columns with two decimal places
+                    Dim decimalColumns As String() = {"unit_price", "total_cost", "remaining_stock_value"}
+                    For Each colName As String In decimalColumns
+                        If datatable_archiveproducts.Columns.Contains(colName) Then
+                            datatable_archiveproducts.Columns(colName).DefaultCellStyle.Format = "F2"
+                        End If
                     Next
 
                 Catch ex As Exception
@@ -739,7 +759,6 @@ Public Class Form2
             End Using
         End Using
     End Sub
-
 
     Private Sub InsertIntoProducts(productId As Integer, supplierId As Integer, productName As String, unitPrice As Decimal, quantityInStock As Integer, unitOfMeasurement As String, totalCost As Decimal, remainingStockValue As Integer, sold As Integer)
         Dim query As String = "INSERT INTO products (product_id, supplier_id, product_name, unit_price, quantity_in_stock, unit_of_measurement, total_cost, remaining_stock_value, sold) " &

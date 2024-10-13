@@ -148,6 +148,9 @@
   <data name="9055226_bxs_dashboard_icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\9055226_bxs_dashboard_icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="3018587_admin_administrator_ajax_options_permission_icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\3018587_admin_administrator_ajax_options_permission_icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="326514_archive_icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\326514_archive_icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -162,6 +165,9 @@
   </data>
   <data name="460199271_1279106266458956_7216275564927585163_n" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\460199271_1279106266458956_7216275564927585163_n.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="3671715_box_icon1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\3671715_box_icon1.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="9035121_receipt_icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\9035121_receipt_icon.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -184,7 +190,7 @@
   <data name="3306567" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\3306567.jpg;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="3671715_box_icon1" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\3671715_box_icon1.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="3018587_admin_administrator_ajax_options_permission_icon1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\3018587_admin_administrator_ajax_options_permission_icon1.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>
