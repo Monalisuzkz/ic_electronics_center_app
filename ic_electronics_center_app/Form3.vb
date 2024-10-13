@@ -771,8 +771,7 @@ Public Class Form3
             End Using
         End Using
     End Sub
-
-    Private Sub datatable_itemlistproducts_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_itemlistproducts.CellClick
+    Private Sub datatable_itemlist_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles datatable_itemlistproducts.CellClick
         Try
             If e.RowIndex >= 0 Then ' Ensure a valid row is clicked
                 Dim selectedRow As DataGridViewRow = datatable_itemlistproducts.Rows(e.RowIndex)
@@ -789,10 +788,21 @@ Public Class Form3
                     tb_moneyamount.Clear()
                     tb_productamounttopaid.Clear()
                     tb_change.Clear()
+
                 Else
                     ' Select the row (checkbox checked)
                     selectedRow.Cells("chkSelect").Value = True
-                    ' Here you could retrieve and display other details if needed
+
+                    ' Retrieve data from the selected row and populate textboxes using column indexes
+                    Dim productName As String = selectedRow.Cells(1).Value.ToString() ' Assuming index 1 is product_name
+                    If cmb_productname.Items.Contains(productName) Then
+                        cmb_productname.SelectedItem = productName
+                    Else
+                        cmb_productname.SelectedIndex = -1 ' If not found, deselect
+                    End If
+
+                    tb_productprice.Text = selectedRow.Cells(3).Value.ToString()
+                    tb_quantity.Text = selectedRow.Cells(2).Value.ToString()
                 End If
             End If
         Catch ex As Exception
@@ -803,7 +813,6 @@ Public Class Form3
     Private Sub InitializeDataGridView()
         datatable_itemlistproducts.Columns.Clear()
 
-        ' Add a checkbox column for selection
         Dim chkSelectColumn As New DataGridViewCheckBoxColumn()
         chkSelectColumn.Name = "chkSelect"
         chkSelectColumn.HeaderText = "Select"
@@ -811,35 +820,38 @@ Public Class Form3
         chkSelectColumn.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter
         datatable_itemlistproducts.Columns.Add(chkSelectColumn)
 
-        ' Adding only the relevant columns
-        datatable_itemlistproducts.Columns.Add("product_name", "Product Name")
-        datatable_itemlistproducts.Columns.Add("unit_cost", "Product Price") ' Renaming to Product Price
-        datatable_itemlistproducts.Columns.Add("return_quantity", "Quantity")
-        datatable_itemlistproducts.Columns.Add("total_cost", "Total Cost") ' Assuming you want to calculate total cost from price and quantity
-
-        ' Set ReadOnly for all columns except the checkbox
         For Each column As DataGridViewColumn In datatable_itemlistproducts.Columns
-            If column.Index <> 0 Then ' Checkbox column should remain editable
+            If column.Index <> 2 Then
                 column.ReadOnly = True
             End If
         Next
-    End Sub
 
+    End Sub
     Private Sub btn_addtolist_Click(sender As Object, e As EventArgs) Handles btn_addtolist.Click
-        Dim productName As String = cmb_productname.SelectedItem.ToString()
-        Dim productPrice As Decimal = Decimal.Parse(tb_productprice.Text)
-        Dim quantity As Integer = Integer.Parse(tb_quantity.Text)
-        Dim totalCost As Decimal = productPrice * quantity
 
-        Dim row As String() = {productName, productPrice.ToString(), quantity.ToString(), totalCost.ToString()}
-        datatable_itemlist.Rows.Add(row)
+        If cmb_productname.SelectedItem IsNot Nothing Then
+            Dim productName As String = cmb_productname.SelectedItem.ToString()
+            Dim productPrice As Decimal
+            Dim quantity As Integer
 
-        UpdateTotalCost()
-        tb_productamounttopaid.Text = tb_producttotalcost.Text
+            ' Try parsing the values safely
+            If Decimal.TryParse(tb_productprice.Text, productPrice) AndAlso Integer.TryParse(tb_quantity.Text, quantity) Then
+                Dim totalCost As Decimal = productPrice * quantity
 
-        ClearAddProductFields()
+                Dim row As String() = {productName, productPrice.ToString(), quantity.ToString(), totalCost.ToString()}
+                datatable_itemlistproducts.Rows.Add(row)
+
+                UpdateTotalCost()
+                tb_productamounttopaid.Text = tb_producttotalcost.Text
+
+                ClearAddProductFields()
+            Else
+                MessageBox.Show("Please enter valid values for price and quantity.")
+            End If
+        Else
+            MessageBox.Show("Please select a product from the list.")
+        End If
     End Sub
-
 
     Private Sub btn_clearadditems_Click(sender As Object, e As EventArgs) Handles btn_clearadditems.Click
         datatable_itemlistproducts.Rows.Clear()
